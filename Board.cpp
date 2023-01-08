@@ -15,6 +15,8 @@ U64 knightAttacks[64];  // 512 Byte
 U64 pawnAttacks[2][64];  // 1 KByte
 U64 pawnPushes[2][64];  // 1 KByte
 
+U64 epTargets[2][9];
+
 const int index64[64] = {
 	0, 47,  1, 56, 48, 27,  2, 60,
    57, 49, 41, 37, 28, 16,  3, 61,
@@ -105,7 +107,6 @@ void inititalizePawnAttacks() {
 		U64 single = C64(1) << sq;
 		pawnAttacks[Color::White][sq] = wPawnWestAttackSet(single) | wPawnEastAttackSet(single);
 		pawnAttacks[Color::Black][sq] = bPawnWestAttackSet(single) | bPawnEastAttackSet(single);
-	}
 #if defined DEBUG_VERBOSE
 	std::cout << "pawnAttacks[" +
 		std::to_string(Color::White) + "][" +
@@ -115,6 +116,39 @@ void inititalizePawnAttacks() {
 		std::to_string(Color::Black) + "][" +
 		std::to_string(sq) + "] = {\n" +
 		BBToString(pawnAttacks[Color::Black][sq]) + "}\n" << std::endl;
+#endif
+	}
+}
+
+void inititalizeEpTargets() {
+#if defined DEBUG
+	std::cout << "ENGINE >> BOARD >> initializing en passant target lookups..." << std::endl;
+#endif
+	for (int epCol = EnPassant::AFile; epCol <= EnPassant::HFile; ++epCol) {
+		epTargets[Color::White][epCol] = fileMask((Square)epCol) & rank6;
+		epTargets[Color::Black][epCol] = fileMask((Square)epCol) & rank3;
+#if defined DEBUG_VERBOSE
+	std::cout << "epTargets[" +
+		std::to_string(Color::White) + "][" +
+		std::to_string(epCol) + "] = {\n" +
+		BBToString(epTargets[Color::White][epCol]) + "}\n" << std::endl;
+	std::cout << "epTargets[" +
+		std::to_string(Color::Black) + "][" +
+		std::to_string(epCol) + "] = {\n" +
+		BBToString(epTargets[Color::White][epCol]) + "}\n" << std::endl;
+#endif
+	}
+	epTargets[Color::White][EnPassant::None] = emptySet;
+	epTargets[Color::Black][EnPassant::None] = emptySet;
+#if defined DEBUG_VERBOSE
+	std::cout << "epTargets[" +
+		std::to_string(Color::White) + "][" +
+		std::to_string(EnPassant::None) + "] = {\n" +
+		BBToString(epTargets[Color::White][EnPassant::None]) + "}\n" << std::endl;
+	std::cout << "epTargets[" +
+		std::to_string(Color::Black) + "][" +
+		std::to_string(EnPassant::None) + "] = {\n" +
+		BBToString(epTargets[Color::White][EnPassant::None]) + "}\n" << std::endl;
 #endif
 }
 
@@ -126,7 +160,6 @@ void inititalizePawnAttacks() {
 //		U64 single = C64(1) << sq;
 //		pawnPushes[Color::White][sq] = singlePushTargets(single, universeSet, Color::White);
 //		pawnPushes[Color::Black][sq] = singlePushTargets(single, universeSet, Color::Black);
-//	}
 //#if defined DEBUG_VERBOSE
 //	std::cout << "pawnPushes[" +
 //		std::to_string(Color::White) + "][" +
@@ -137,6 +170,7 @@ void inititalizePawnAttacks() {
 //		std::to_string(sq) + "] = {\n" +
 //		BBToString(pawnPushes[Color::Black][sq]) + "}\n" << std::endl;
 //#endif
+//	}
 //}
 
 void initalizeBoardClass() {
@@ -148,6 +182,7 @@ void initalizeBoardClass() {
 	initializeSimpleAttackLookups();
 	//inititalizePawnPushes();
 	inititalizePawnAttacks();
+	inititalizeEpTargets();
 #if defined DEBUG
 	std::cout << "ENGINE >> finished initializing board class" << std::endl;
 #endif

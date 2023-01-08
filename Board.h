@@ -43,6 +43,8 @@ extern U64 rankMaskEx[64];  // 512 Byte
 extern U64 kingAttacks[64];  // 512 Byte
 extern U64 knightAttacks[64];  // 512 Byte
 extern U64 pawnAttacks[2][64];  // 1 KByte
+
+extern U64 epTargets[2][9];  // 144 Byte
 //extern U64 pawnPushes[2][64];  // 1 KByte
 
 std::string BBToString(U64 bb);
@@ -99,22 +101,22 @@ public:
 		White,
 		Black,
 		Pawn,
-		Bishop,
 		Knight,
+		Bishop,
 		Rook,
 		Queen,
 		King
 	};
 
 	inline U64 getBB(PieceBB piece) const { return mPieceBB[piece]; }
-	inline U64 getColor(Color color) const { return mPieceBB[color];}
-	inline U64 getPiece(Piece piece) const { return mPieceBB[piece + 2];}
+	inline U64 getColor(Color color) const { return mPieceBB[color]; }
+	inline U64 getPiece(Piece piece) const { return mPieceBB[piece + 2]; }
 	inline U64 getColoredPieces(Color color, Piece piece) const { return mPieceBB[piece + 2] & mPieceBB[color]; }
 	inline U64 getColoredKing(Color color) const { return mPieceBB[PieceBB::King] & mPieceBB[color]; }
-	inline U64 getWhitePawns() const { return mPieceBB[PieceBB::Pawn] & mPieceBB[PieceBB::White];}
+	inline U64 getWhitePawns() const { return mPieceBB[PieceBB::Pawn] & mPieceBB[PieceBB::White]; }
 	inline U64 getBlackPawns() const { return mPieceBB[PieceBB::Pawn] & mPieceBB[PieceBB::Black]; }
 	inline U64 getBishopLikeSliders() const { return mPieceBB[PieceBB::Queen] & mPieceBB[PieceBB::Bishop]; }
-	inline U64 getRookLikeSliders() const { return mPieceBB[PieceBB::Queen] & mPieceBB[PieceBB::Rook];}
+	inline U64 getRookLikeSliders() const { return mPieceBB[PieceBB::Queen] & mPieceBB[PieceBB::Rook]; }
 	inline U64 getOccupance() const { return mPieceBB[PieceBB::White] | mPieceBB[PieceBB::Black]; }
 	inline U64 getEmpty() const { return ~getOccupance(); }
 	inline U64 getAttacksTo(Square sq) const {
@@ -125,5 +127,17 @@ public:
 			| (kingAttacks[sq] & mPieceBB[PieceBB::King])
 			| (bishopAttacks(occ, sq) & (mPieceBB[PieceBB::Queen] | mPieceBB[PieceBB::Bishop]))
 			| (rookAttacks(occ, sq) & (mPieceBB[PieceBB::Queen] | mPieceBB[PieceBB::Rook]));
+	}
+	inline void removeColoredPieces(Color color, Piece piece, U64 remove) {
+		mPieceBB[piece + 2] &= ~remove;
+		mPieceBB[color] &= ~remove;
+	}
+	inline void createColoredPiece(Color color, Piece piece, U64 create) {
+		mPieceBB[piece + 2] |= create;
+		mPieceBB[color] |= create;
+	}
+	inline void updateColoredPiece(Color color, Piece piece, U64 update) {
+		mPieceBB[piece + 2] ^= update;
+		mPieceBB[color] ^= update;
 	}
 };

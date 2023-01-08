@@ -1,11 +1,11 @@
 #include "Position.h"
 
-MoveGenData Position::GeneratePseudoLegalMoves(Move buffer[], const size_t bufferIndex) {
+MoveGenData Position::GenerateMoves(Move buffer[], const size_t bufferIndex) {
 	size_t curBufferIndex = bufferIndex;
 	Color opponent = (Color)((mTurn + 1) & 1);
 	U64 opponentBB = mBoard.getColor(opponent);
 	U64 occ = mBoard.getOccupance();
-	// TODO: Check for / eliminate possible buffer overflow.
+	// TODO: check for / eliminate possible buffer overflow.
 	auto serializeMoves = [&buffer, &curBufferIndex](Square from, U64 moves, MoveFlags flags) {
 		while (moves) {
 			buffer[curBufferIndex++] = Move(from, bitScanForward(moves), flags);
@@ -40,11 +40,11 @@ MoveGenData Position::GeneratePseudoLegalMoves(Move buffer[], const size_t buffe
 			promoters &= promoters - 1;
 		}
 		U64 nonPromoters = pawnBB & ~promoters;
-		U64 enPassantPos = fileMask((Square)mEPCol) & (mTurn == Color::White ? rank6 : rank3);
+		U64 enPassantTarget = epTargets[mTurn][mEnPassant];
 		while (nonPromoters) {
 			Square from = bitScanForward(nonPromoters);
 			serializeMoves(from, pawnAttacks[mTurn][from] & opponentBB, MoveFlags::Capture);
-			serializeMoves(from, pawnAttacks[mTurn][from] & enPassantPos, MoveFlags::EPCapture);
+			serializeMoves(from, pawnAttacks[mTurn][from] & enPassantTarget, MoveFlags::EPCapture);
 			nonPromoters &= nonPromoters - 1;
 		}
 	}
@@ -119,7 +119,7 @@ MoveGenData Position::GeneratePseudoLegalMoves(Move buffer[], const size_t buffe
 		}
 	}
 
-	// TODO: Generate castles.
+	// TODO: generate castles.
 
 	return MoveGenData(curBufferIndex - bufferIndex);
 }
@@ -129,33 +129,84 @@ void Position::makeMove(const Move move)
 	U64 fromBB = C64(1) << move.getFrom();
 	U64 toBB = C64(1) << move.getTo();
 	MoveFlags flags = move.getFlags();
-	
+	Color opponent = (Color)((mTurn + 1) & 1);
+	Piece piece;
+
 	switch (flags) {
 	case MoveFlags::Quiet:
 	case MoveFlags::Capture:
-		Piece piece;  // does this violate anything?
 		if (mBoard.getColoredPieces(mTurn, Piece::Pawn) & fromBB) piece = Piece::Pawn;
 		else if (mBoard.getColoredPieces(mTurn, Piece::Bishop) & fromBB) piece = Piece::Bishop;
 		else if (mBoard.getColoredPieces(mTurn, Piece::Knight) & fromBB) piece = Piece::Knight;
 		else if (mBoard.getColoredPieces(mTurn, Piece::Rook) & fromBB) piece = Piece::Rook;
 		else if (mBoard.getColoredPieces(mTurn, Piece::Queen) & fromBB) piece = Piece::Queen;
 		else piece = Piece::King;
-
-		if (flags == MoveFlags::Capture) {
-			// Do I need to save some data here or will it be in the MoveGen?
-			// TODO: remove enemy piece
-		}
-
-		// TODO: make move
-
+		break;
+	case MoveFlags::DoublePawn:
+	case MoveFlags::EPCapture:
+		piece = Piece::Pawn;
+		break;
+	case MoveFlags::KnightPromo: 
+	case MoveFlags::BishopPromo: 
+	case MoveFlags::RookPromo: 
+	case MoveFlags::QueenPromo: 
+	case MoveFlags::KnightPromoCapture: 
+	case MoveFlags::BishopPromoCapture: 
+	case MoveFlags::RookPromoCapture: 
+	case MoveFlags::QueenPromoCapture: 
+		piece = Piece::Pawn;
+		mBoard.removeColoredPieces(mTurn, Piece::Pawn, fromBB);
+		mBoard.createColoredPiece(mTurn, (Piece)((flags & 0b11) + 1), toBB);
+		break;
+	case MoveFlags::KCastle:
+	case MoveFlags::QCastle:
+		piece = Piece::King;  // Important, castling is king's move.
+		// TODO: implement castling.
 		break;
 	default:
-		throw "Not implemented.";
-		break;
+		throw "Missing case";
 	}
-	// TODO: implement this.
 
-	throw "Not implemented.";
+	if (flags & MoveFlags::CaptureFlag) {
+		Piece captured;
+		if (mBoard.getColoredPieces(opponent, Piece::Pawn) & toBB) captured = Piece::Pawn;
+		else if (mBoard.getColoredPieces(opponent, Piece::Bishop) & toBB) captured = Piece::Bishop;
+		else if (mBoard.getColoredPieces(opponent, Piece::Knight) & toBB) captured = Piece::Knight;
+		else if (mBoard.getColoredPieces(opponent, Piece::Rook) & toBB) captured = Piece::Rook;
+		else captured = Piece::Queen;
+
+		// TODO: push captured piece to capture stack.
+		mBoard.removeColoredPieces(opponent, captured, toBB);
+	}
+	
+	// TODO: many irreversible aspects of a position can't always be deduced just from the move,
+	// there has to be some way of storing data about when and what data irreversible data is stored.
+
+	if (!(flags & MoveFlags::PromoFlag)) mBoard.updateColoredPiece(mTurn, piece, fromBB | toBB);
+
+	if ((flags & MoveFlags::CaptureFlag) || (piece == Piece::Pawn)) {
+		// TODO: push hm counter to hm counter stack.
+		mHMClock = 0;
+	}
+	else ++mHMClock;
+
+	if (mEnPassant != EnPassant::None) {
+		// TODO: store en passant on en passant stack.
+		// it's important to store it independantly of whether it's executed or not.
+		// TODO: also add some extara data, since en passant state can't always be deduced when unmaking move.
+	}
+	mEnPassant = flags == MoveFlags::DoublePawn ? (EnPassant)(move.getFrom() & 0x7) : EnPassant::None;
+
+	CRightsFlags kingMoveBrokenCRights = (CRightsFlags)(
+		(CRightsFlags::WhiteKing | CRightsFlags::WhiteQueen) * (mTurn == Color::White ? 1 : 4)
+	);
+	if ((piece == Piece::King) && (mCRights & kingMoveBrokenCRights)) {
+		// TODO: handle castling rights if rook moved.
+		// TODO: store castling rights on castling rights stack.
+		mCRights = (CRightsFlags)(mCRights & ~kingMoveBrokenCRights);
+	}
+
+	mTurn = opponent;
 }
 
 void Position::unmakeMove(const Move move)

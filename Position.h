@@ -5,12 +5,13 @@
 #include "MoveGen.h"
 
 class Position
+	// TODO: Position and MoveGen classes should be merged.
 {
 private:
 	Board mBoard;
 	Color mTurn;
 	CRightsFlags mCRights;
-	BYTE mEPCol;
+	EnPassant mEnPassant;  
 	BYTE mHMClock;
 public:
 	inline U64 getCheckingPieces() { 
@@ -23,7 +24,11 @@ public:
 			bitScanForward(mBoard.getColoredKing((Color)((mTurn + 1) & 1)))
 		) & mBoard.getColor(mTurn)) != 0;
 	}
-	MoveGenData GeneratePseudoLegalMoves(Move buffer[], const size_t bufferIndex);
+	// TODO: may want to separate move generation into stages and generate those move in
+	// separate functions. 
+	// The functions should probably be private since it may be good to abstract the
+	// exact workings of stages away from the end user.
+	MoveGenData GenerateMoves(Move buffer[], const size_t bufferIndex);
 	void makeMove(const Move move);
 	void unmakeMove(const Move move);
 };

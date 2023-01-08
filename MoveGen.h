@@ -4,14 +4,13 @@
 #include <stdexcept>
 
 #define MAX_PLY 256
-#define MOVE_GEN_BUF 50
-#define MOVE_BUF_CAPACITY MAX_PLY * MOVE_GEN_BUF
+#define MOVE_BUF_CAPACITY MAX_PLY * 64
 
 enum MoveFlags {
-	SpecFlag0 = 1,
-	SpecFlag1 = 2,
-	CaptureFlag = 4,
-	PromoFlag = 8,
+	SpecFlag0 = 0b1,
+	SpecFlag1 = 0b10,
+	CaptureFlag = 0b100,
+	PromoFlag = 0b1000,
 
 	Quiet = 0,
 	DoublePawn = 1,
@@ -57,27 +56,29 @@ struct MoveGenData {
 };
 
 class MoveGen {
+	// TODO: Position and MoveGen classes should be merged.
 private:
 	Position mPos;
 	MoveGenData mMoveHistory[MAX_PLY];
 	size_t mPlyIdx = 0;
 	Move mMoveBuf[MOVE_BUF_CAPACITY];
 	size_t mBufIdx = 0;
+	// TODO: add other stacks to store irreversible data.
 public:
 	inline const Position& getPosition() const { return mPos; }
-	inline void GeneratePseudoLegalMoves() {
+	inline void GenerateMoves() {  // TODO: this needs to be reworked.
 		if (mPlyIdx == MAX_PLY) throw std::out_of_range("mMoveHistory overflowed");
-		MoveGenData data = mPos.GeneratePseudoLegalMoves(mMoveBuf, mBufIdx);
+		MoveGenData data = mPos.GenerateMoves(mMoveBuf, mBufIdx);
 		mBufIdx += data.moveCount;
 		mMoveHistory[mPlyIdx++] = data;
 	}
-	inline void AbandonMove() {
+	inline void AbandonMove() {  // TODO: this needs to be reworked.
 		if (mPlyIdx == 0) throw std::out_of_range("mMoveHistory underflowed");
 		MoveGenData data = mMoveHistory[--mPlyIdx];
 		mBufIdx -= data.moveCount;
 	}
 	inline bool NextMove() {
-		if (mMoveHistory[mPlyIdx].moveCount == 0) return false;
+		if (mMoveHistory[mPlyIdx].moveCount == 0) return false;  // TODO: this needs to be reworked.
 		// TODO: implement this.
 	}
 };
