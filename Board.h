@@ -24,9 +24,13 @@ const U64 diaA1H8 = C64(0x8040201008040201);
 const U64 diaH1A8 = C64(0x0102040810204080);
 const U64 diaC2H7 = C64(0x0080402010080400);
 const U64 rank1 = C64(0xff);
-const U64 rank2 = C64(0x00ff);
+const U64 rank2 = C64(0xff00);
+const U64 rank3 = C64(0xff0000);
+const U64 rank4 = C64(0xff000000);
+const U64 rank5 = C64(0xff00000000);
+const U64 rank6 = C64(0xff0000000000);
 const U64 rank7 = C64(0xff000000000000);
-const U64 rnak8 = C64(0xff00000000000000);
+const U64 rank8 = C64(0xff00000000000000);
 const U64 bFile = C64(0x0202020202020202);
 
 extern U64 fillUpAttacks[8][64];  // 4 KByte
@@ -39,6 +43,7 @@ extern U64 rankMaskEx[64];  // 512 Byte
 extern U64 kingAttacks[64];  // 512 Byte
 extern U64 knightAttacks[64];  // 512 Byte
 extern U64 pawnAttacks[2][64];  // 1 KByte
+//extern U64 pawnPushes[2][64];  // 1 KByte
 
 std::string BBToString(U64 bb);
 
@@ -76,6 +81,7 @@ inline U64 rookAttacks(U64 occ, Square sq) { return rankAttacks(occ, sq) | fileA
 
 U64 knightAttackSet(U64 knights);
 U64 kingAttackSet(U64 kingSet);
+U64 singlePushTargets(U64 pawns, U64 empty, Color color);
 
 U64 wPawnEastAttackSet(U64 wpawns);
 U64 wPawnWestAttackSet(U64 wpawns);
@@ -106,7 +112,9 @@ public:
 	inline U64 getColoredPieces(Color color, Piece piece) const { return mPieceBB[piece + 2] & mPieceBB[color]; }
 	inline U64 getColoredKing(Color color) const { return mPieceBB[PieceBB::King] & mPieceBB[color]; }
 	inline U64 getWhitePawns() const { return mPieceBB[PieceBB::Pawn] & mPieceBB[PieceBB::White];}
-	inline U64 getBlackPawns() const { return mPieceBB[PieceBB::Pawn] & mPieceBB[PieceBB::Black];}
+	inline U64 getBlackPawns() const { return mPieceBB[PieceBB::Pawn] & mPieceBB[PieceBB::Black]; }
+	inline U64 getBishopLikeSliders() const { return mPieceBB[PieceBB::Queen] & mPieceBB[PieceBB::Bishop]; }
+	inline U64 getRookLikeSliders() const { return mPieceBB[PieceBB::Queen] & mPieceBB[PieceBB::Rook];}
 	inline U64 getOccupance() const { return mPieceBB[PieceBB::White] | mPieceBB[PieceBB::Black]; }
 	inline U64 getEmpty() const { return ~getOccupance(); }
 	inline U64 getAttacksTo(Square sq) const {

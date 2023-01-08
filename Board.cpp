@@ -13,6 +13,7 @@ U64 rankMaskEx[64];  // 512 Byte
 U64 kingAttacks[64];  // 512 Byte
 U64 knightAttacks[64];  // 512 Byte
 U64 pawnAttacks[2][64];  // 1 KByte
+U64 pawnPushes[2][64];  // 1 KByte
 
 const int index64[64] = {
 	0, 47,  1, 56, 48, 27,  2, 60,
@@ -117,6 +118,27 @@ void inititalizePawnAttacks() {
 #endif
 }
 
+//void inititalizePawnPushes() {
+//#if defined DEBUG
+//	std::cout << "ENGINE >> BOARD >> initializing pawn pushes lookups..." << std::endl;
+//#endif
+//	for (int sq = 0; sq < 64; ++sq) {
+//		U64 single = C64(1) << sq;
+//		pawnPushes[Color::White][sq] = singlePushTargets(single, universeSet, Color::White);
+//		pawnPushes[Color::Black][sq] = singlePushTargets(single, universeSet, Color::Black);
+//	}
+//#if defined DEBUG_VERBOSE
+//	std::cout << "pawnPushes[" +
+//		std::to_string(Color::White) + "][" +
+//		std::to_string(sq) + "] = {\n" +
+//		BBToString(pawnPushes[Color::White][sq]) + "}\n" << std::endl;
+//	std::cout << "pawnPushes[" +
+//		std::to_string(Color::Black) + "][" +
+//		std::to_string(sq) + "] = {\n" +
+//		BBToString(pawnPushes[Color::Black][sq]) + "}\n" << std::endl;
+//#endif
+//}
+
 void initalizeBoardClass() {
 #if defined DEBUG
 	std::cout << "ENGINE >> initializing board class..." << std::endl;
@@ -124,6 +146,7 @@ void initalizeBoardClass() {
 	initializeKGLookups();
 	initializeLineMasks();
 	initializeSimpleAttackLookups();
+	//inititalizePawnPushes();
 	inititalizePawnAttacks();
 #if defined DEBUG
 	std::cout << "ENGINE >> finished initializing board class" << std::endl;
@@ -260,6 +283,10 @@ U64 kingAttackSet(U64 kingSet) {
 	kingSet |= attacks;
 	attacks |= nortOne(kingSet) | soutOne(kingSet);
 	return attacks;
+}
+
+U64 singlePushTargets(U64 pawns, U64 empty, Color color) {
+	return ((pawns << 8) >> (color << 4)) & empty;
 }
 
 U64 wPawnEastAttackSet(U64 wpawns) { return noEaOne(wpawns); }
