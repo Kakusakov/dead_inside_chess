@@ -32,9 +32,21 @@ MoveGenData Position::GeneratePseudoLegalMoves(Move buffer[], const size_t buffe
 			buffer[curBufferIndex++] = Move(promoterSq, to, MoveFlags::BishopPromoCapture);
 			promotionAttacks &= promotionAttacks - 1;
 		}
-		// TODO: Implement quiet promotions.
+		// TODO: Implement push promotions.
 		promoters &= promoters - 1;
 	}
+	// TODO: implement pawn attacks and pushes
+	U64 knightBB = mBoard.getColoredPieces(mTurn, Piece::Knight);
+	while (knightBB) {
+		Square knightSq = bitScanForward(knightBB);
+		serializeMoves(knightSq, knightAttacks[knightSq] & opponent, MoveFlags::Capture);
+		serializeMoves(knightSq, knightAttacks[knightSq] & ~occ, MoveFlags::Quiet);
+		knightBB &= knightBB - 1;
+	}
+
+	Square kingSq = bitScanForward(mBoard.getColoredKing(mTurn));
+	serializeMoves(kingSq, kingAttacks[kingSq] & opponentBB, MoveFlags::Capture);
+	serializeMoves(kingSq, kingAttacks[kingSq] & ~occ, MoveFlags::Quiet);
 
 	// TODO: Finish implementing this.
 
